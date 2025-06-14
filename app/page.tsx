@@ -1,103 +1,139 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState } from 'react';
+import Image from 'next/image';
+import type { PutBlobResult } from '@vercel/blob';
+
+// Define the structure of our analysis result
+interface AnalysisResult {
+  name: string;
+  care: string;
+  score: number;
+}
+
+export default function AvatarUploadPage() {
+  const [blob, setBlob] = useState<PutBlobResult | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    setResult(null);
+
+    const file = (event.currentTarget.elements.namedItem('file') as HTMLInputElement)?.files?.[0];
+    if (!file) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // 1. Upload the file to Vercel Blob - now with encoding
+      const response = await fetch(
+        `/api/upload?filename=${encodeURIComponent(file.name)}`,
+        {
+          method: 'POST',
+          body: file,
+        },
+      );
+
+      // CRITICAL FIX: Check if the upload was successful
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload file.');
+      }
+
+      const newBlob = (await response.json()) as PutBlobResult;
+      setBlob(newBlob);
+
+      // 2. Call our analysis API with the new blob's URL
+      const analysisResponse = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: newBlob.url }),
+      });
+
+      if (!analysisResponse.ok) {
+        const errorData = await analysisResponse.json();
+        throw new Error(errorData.details || 'Failed to get analysis from the server.');
+      }
+
+      const analysisResult = await analysisResponse.json();
+      setResult(analysisResult);
+
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        setError(e.message);
+      } else {
+        setError('An unexpected error occurred.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main className="flex min-h-screen flex-col items-center p-8 md:p-24 bg-green-50">
+      <div className="w-full max-w-2xl bg-white p-8 rounded-lg shadow-lg">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2 text-center">
+          Tomato Disease Analyzer 🍅
+        </h1>
+        <p className="text-gray-600 mb-6 text-center">
+          Upload an image of a tomato leaf to identify potential diseases and get care tips.
+        </p>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        <form onSubmit={handleSubmit}>
+          <input
+            name="file"
+            type="file"
+            required
+            accept="image/*"
+            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-100 file:text-green-700 hover:file:bg-green-200"
+          />
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full mt-4 px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+            {isLoading ? 'Analyzing...' : 'Analyze Image'}
+          </button>
+        </form>
+
+        {error && <div className="mt-4 text-red-600 bg-red-100 p-3 rounded-md text-center">Error: {error}</div>}
+
+        {isLoading && (
+          <div className="mt-4 text-center">
+            <p className="text-gray-700">Analyzing your image... 🤖</p>
+            <div className="mt-2 w-16 h-16 border-4 border-dashed rounded-full animate-spin border-green-500 mx-auto"></div>
+          </div>
+        )}
+        
+        {result && blob && (
+          <div className="mt-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+            <h2 className="text-2xl font-semibold text-gray-800 mb-4">Analysis Result</h2>
+            <div className="flex flex-col md:flex-row gap-6 items-center">
+              <Image
+                src={blob.url}
+                alt="Uploaded tomato leaf"
+                width={200}
+                height={200}
+                className="object-contain rounded-md shadow-md"
+              />
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-gray-700">{result.name}</h3>
+                <p className="text-sm text-gray-500 mb-2">
+                  <strong>Confidence:</strong> {(result.score * 100).toFixed(2)}%
+                </p>
+                <p className="text-gray-600">
+                  <strong>Recommended Care:</strong> {result.care}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
