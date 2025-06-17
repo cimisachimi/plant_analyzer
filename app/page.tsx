@@ -1,10 +1,12 @@
+// Filename: app/page.tsx (or your component file)
+
 'use client';
 
 import { useState } from 'react';
 import Image from 'next/image';
 import type { PutBlobResult } from '@vercel/blob';
 
-// Define the structure of our analysis result
+// This interface remains the same, as it defines what our UI needs
 interface AnalysisResult {
   name: string;
   care: string;
@@ -30,7 +32,7 @@ export default function AvatarUploadPage() {
     }
 
     try {
-      // 1. Upload the file to Vercel Blob - now with encoding
+      // 1. Upload the file to Vercel Blob
       const response = await fetch(
         `/api/upload?filename=${encodeURIComponent(file.name)}`,
         {
@@ -39,7 +41,6 @@ export default function AvatarUploadPage() {
         },
       );
 
-      // CRITICAL FIX: Check if the upload was successful
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to upload file.');
@@ -48,7 +49,7 @@ export default function AvatarUploadPage() {
       const newBlob = (await response.json()) as PutBlobResult;
       setBlob(newBlob);
 
-      // 2. Call our analysis API with the new blob's URL
+      // 2. Call our analysis API
       const analysisResponse = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -60,6 +61,7 @@ export default function AvatarUploadPage() {
         throw new Error(errorData.details || 'Failed to get analysis from the server.');
       }
 
+      // 3. The API now returns the exact data structure we need. No more mapping needed here!
       const analysisResult = await analysisResponse.json();
       setResult(analysisResult);
 
@@ -74,6 +76,8 @@ export default function AvatarUploadPage() {
     }
   };
 
+  // The rest of your return() JSX remains exactly the same as it was.
+  // It is already correctly designed to display the 'result' state.
   return (
     <main className="flex min-h-screen flex-col items-center p-8 md:p-24 bg-green-50">
       <div className="w-full max-w-2xl bg-white p-8 rounded-lg shadow-lg">
