@@ -10,10 +10,7 @@ interface AnalysisResult {
   score: number;
 }
 
-// --- UPDATED: Pemetaan data di sisi server untuk semua penyakit dalam Bahasa Indonesia ---
 const getAnalysisDetails = (label: string, confidence: number): AnalysisResult => {
-  // 'label' dari model Anda sekarang adalah string lengkap, misal, "A tomato leaf with Late Blight"
-  
   const diseaseData: { [key: string]: { name: string; care: string } } = {
     'A tomato leaf with Early Blight': {
       name: 'Bercak Kering (Early Blight)',
@@ -33,7 +30,7 @@ const getAnalysisDetails = (label: string, confidence: number): AnalysisResult =
     },
     'A tomato leaf with Bacterial Spot': {
         name: 'Bercak Bakteri',
-        care: 'Hindari penyiraman dari atas untuk mencegah penyebaran. Buang daun atau tanaman yang terinfeksi. Bakterisida berbahan dasar tembaga dapat memperlambat penyakit tetapi mungkin не bisa menghilangkannya. Jangan menyentuh tanaman saat basah.',
+        care: 'Hindari penyiraman dari atas untuk mencegah penyebaran. Buang daun atau tanaman yang terinfeksi. Bakterisida berbahan dasar tembaga dapat memperlambat penyakit tetapi mungkin tidak bisa menghilangkannya. Jangan menyentuh tanaman saat basah.',
     },
     'A tomato leaf with Target Spot': {
         name: 'Bercak Target',
@@ -57,9 +54,8 @@ const getAnalysisDetails = (label: string, confidence: number): AnalysisResult =
     },
   };
 
-  // 'label' itu sendiri sekarang menjadi kunci pencarian
   const details = diseaseData[label] || {
-    name: label, // Jika tidak ditemukan, gunakan label aslinya
+    name: label,
     care: 'Rekomendasi perawatan spesifik tidak ditemukan. Silakan berkonsultasi dengan ahli perkebunan setempat.',
   };
 
@@ -85,12 +81,15 @@ export async function POST(request: Request) {
 
     if (Array.isArray(result.data) && result.data.length > 0) {
       const rawPrediction = result.data[0];
-      const label = rawPrediction.label; // String lengkap, misal, "A tomato leaf with Late Blight"
+      const label = rawPrediction.label;
       
       const confidenceObject = rawPrediction.confidences?.find(
           (c: { label: string; }) => c.label === label
       );
-      const score = confidenceObject?.confidence ?? 0.95; 
+      
+      // --- PERUBAHAN DI SINI ---
+      // Gunakan nilai confidence asli dari model, atau 0 jika tidak ditemukan.
+      const score = confidenceObject?.confidence ?? 0; 
 
       const finalResult = getAnalysisDetails(label, score);
       
