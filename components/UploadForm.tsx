@@ -1,23 +1,54 @@
+import { useRef, useState } from 'react';
+
 interface Props {
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   isLoading: boolean;
 }
 
 export default function UploadForm({ onSubmit, isLoading }: Props) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [captureMode, setCaptureMode] = useState<'camera' | 'upload'>('upload');
+
+  const handleButtonClick = (mode: 'camera' | 'upload') => {
+    setCaptureMode(mode);
+    setTimeout(() => {
+      fileInputRef.current?.click();
+    }, 0);
+  };
+
   return (
     <form onSubmit={onSubmit}>
+      <div className="flex gap-4 mb-4">
+        <button
+          type="button"
+          onClick={() => handleButtonClick('camera')}
+          className="w-1/2 px-4 py-2 text-sm font-semibold bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition"
+        >
+          Ambil Foto
+        </button>
+        <button
+          type="button"
+          onClick={() => handleButtonClick('upload')}
+          className="w-1/2 px-4 py-2 text-sm font-semibold bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition"
+        >
+          Unggah Gambar
+        </button>
+      </div>
+
       <input
+        ref={fileInputRef}
         name="file"
         type="file"
-        required
         accept="image/*"
-        capture="environment" // <- tambahkan ini agar bisa buka kamera langsung
-        className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 transition-colors cursor-pointer"
+        capture={captureMode === 'camera' ? 'environment' : undefined}
+        required
+        className="hidden"
       />
+
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full mt-4 px-4 py-3 text-base font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:bg-slate-400 disabled:cursor-not-allowed"
+        className="w-full mt-2 px-4 py-3 text-base font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:bg-slate-400 disabled:cursor-not-allowed"
       >
         {isLoading ? 'Menganalisis...' : 'Analisis Gambar'}
       </button>
