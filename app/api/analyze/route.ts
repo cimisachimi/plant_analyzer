@@ -14,20 +14,53 @@ const supabase = createClient(
 );
 
 interface AnalysisResult { name: string; care: string; score: number; }
+
 const getAnalysisDetails = (label: string, confidence: number): AnalysisResult => {
-    const diseaseData: { [key: string]: { name: string; care: string } } = {
-    'A tomato leaf with Early Blight': { name: 'Bercak Kering (Early Blight)', care: 'Buang dan musnahkan daun bagian bawah yang terinfeksi. Pastikan sirkulasi udara baik dan hindari penyiraman dari atas. Gunakan fungisida berbahan dasar tembaga atau klorotalonil.' },
-    'A tomato leaf with Late Blight': { name: 'Busuk Daun (Late Blight)', care: 'Penyakit ini menyebar cepat. Segera cabut dan musnahkan tanaman yang terinfeksi. Pastikan jarak tanam cukup untuk sirkulasi udara. Gunakan fungisida berbahan tembaga atau sistemik.' },
-    'A tomato leaf with Leaf Mold': { name: 'Embun Tepung (Leaf Mold)', care: 'Perbaiki sirkulasi udara dan hindari kelembapan berlebih. Gunakan fungisida jika parah.' },
-    'A tomato leaf with Septoria Leaf Spot': { name: 'Bercak Daun Septoria', care: 'Buang daun terinfeksi, beri mulsa, dan gunakan fungisida seperti klorotalonil atau mankozeb.' },
-    'A tomato leaf with Bacterial Spot': { name: 'Bercak Bakteri', care: 'Hindari penyiraman dari atas dan gunakan bakterisida berbasis tembaga.' },
-    'A tomato leaf with Target Spot': { name: 'Bercak Target', care: 'Pangkas daun terinfeksi dan gunakan fungisida yang sesuai.' },
-    'A tomato leaf with Tomato Yellow Leaf Curl Virus': { name: 'Virus Keriting Daun Kuning Tomat', care: 'Tidak ada obat. Cabut tanaman dan kendalikan kutu kebul.' },
-    'A tomato leaf with Tomato Mosaic Virus': { name: 'Virus Mosaik Tomat', care: 'Musnahkan tanaman, desinfeksi alat, dan kendalikan kutu daun.' },
-    'A tomato leaf with Spider Mites Two-spotted Spider Mite': { name: 'Tungau Laba-laba', care: 'Gunakan semprotan air, sabun insektisida, atau minyak nimba.' },
-    'A healthy tomato leaf': { name: 'Daun Sehat', care: 'Lanjutkan praktik perawatan tanaman yang baik.' },
+  const diseaseData: { [key: string]: { name: string; care: string } } = {
+    'A tomato leaf with Early Blight': { 
+      name: 'Bercak Kering (Early Blight)', 
+      care: 'Segera buang daun bagian bawah yang terinfeksi. Pastikan sirkulasi udara baik dengan memangkas cabang yang tidak perlu. Hindari penyiraman dari atas daun, siram langsung ke tanah. Untuk pengendalian, gunakan fungisida berbahan dasar tembaga (organik) atau klorotalonil.' 
+    },
+    'A tomato leaf with Late Blight': { 
+      name: 'Busuk Daun (Late Blight)', 
+      care: 'Penyakit ini sangat berbahaya dan menyebar cepat. Segera cabut dan musnahkan (bakar) seluruh tanaman yang terinfeksi untuk mencegah penyebaran. Untuk perlindungan, semprot tanaman sehat di sekitarnya dengan fungisida sistemik atau yang mengandung tembaga, terutama saat cuaca lembab dan sejuk.' 
+    },
+    'A tomato leaf with Leaf Mold': { 
+      name: 'Embun Tepung (Leaf Mold)', 
+      care: 'Penyakit ini menyukai kelembapan tinggi. Perbaiki sirkulasi udara secara drastis dengan pemangkasan. Turunkan kelembapan (jika di dalam greenhouse) dan hindari membasahi daun. Gunakan fungisida jika serangan sudah parah. Menanam varietas yang tahan adalah pencegahan terbaik.' 
+    },
+    'A tomato leaf with Septoria Leaf Spot': { 
+      name: 'Bercak Daun Septoria', 
+      care: 'Buang dan hancurkan semua daun yang terinfeksi. Beri mulsa jerami di sekitar pangkal tanaman untuk mengurangi percikan spora jamur dari tanah. Lakukan rotasi tanaman setiap tahun. Gunakan fungisida yang mengandung klorotalonil atau mankozeb.' 
+    },
+    'A tomato leaf with Bacterial Spot': { 
+      name: 'Bercak Bakteri', 
+      care: 'Penyakit bakteri sulit diobati. Hindari penyiraman dari atas. Jangan menyentuh atau bekerja di kebun saat tanaman basah untuk mencegah penyebaran. Semprotan bakterisida berbasis tembaga dapat membantu memperlambat, tetapi tidak akan menyembuhkan infeksi.' 
+    },
+    'A tomato leaf with Target Spot': { 
+      name: 'Bercak Target', 
+      care: 'Mirip dengan Bercak Kering. Pangkas daun yang terinfeksi untuk meningkatkan sirkulasi udara dan mengurangi sumber spora. Pastikan nutrisi tanaman, terutama kalium, tercukupi. Gunakan fungisida yang sama seperti untuk Bercak Kering jika diperlukan.' 
+    },
+    'A tomato leaf with Tomato Yellow Leaf Curl Virus': { 
+      name: 'Virus Keriting Daun Kuning Tomat', 
+      care: 'Tidak ada obat untuk virus ini. Tanaman yang terinfeksi harus segera dicabut dan dimusnahkan untuk mencegah penyebaran. Fokus utama adalah pada pencegahan dengan mengendalikan serangga vektornya, yaitu kutu kebul (whitefly), menggunakan insektisida atau perangkap lengket.' 
+    },
+    'A tomato leaf with Tomato Mosaic Virus': { 
+      name: 'Virus Mosaik Tomat', 
+      care: 'Tidak ada obat. Segera musnahkan tanaman yang terinfeksi. Virus ini sangat mudah menular melalui sentuhan, jadi selalu desinfeksi alat (gunting, sarung tangan) dan cuci tangan setelah memegang tanaman sakit. Kendalikan kutu daun yang bisa menjadi vektor.' 
+    },
+    'A tomato leaf with Spider Mites Two-spotted Spider Mite': { 
+      name: 'Tungau Laba-laba (Hama)', 
+      care: 'Ini adalah hama, bukan penyakit. Periksa bagian bawah daun untuk jaring halus. Semprot dengan air bertekanan kuat untuk menjatuhkan mereka. Jika parah, gunakan sabun insektisida atau minyak nimba (neem oil). Mendorong predator alami seperti kepik juga sangat membantu.' 
+    },
+    'A healthy tomato leaf': { 
+      name: 'Daun Sehat', 
+      care: 'Kondisi tanaman Anda tampak prima. Lanjutkan praktik perawatan yang baik seperti penyiraman yang konsisten di pangkal tanaman, pemupukan seimbang, dan pastikan mendapat sinar matahari yang cukup. Tetap waspada terhadap gejala awal penyakit.' 
+    },
   };
+  
   const details = diseaseData[label] || { name: label, care: 'Rekomendasi tidak ditemukan. Konsultasikan dengan ahli tanaman.' };
+  
   return { ...details, score: confidence };
 };
 
