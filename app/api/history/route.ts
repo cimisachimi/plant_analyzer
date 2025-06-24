@@ -36,6 +36,6 @@ export async function GET() {
     { error: 'Gagal mengambil data riwayat.', details: errorMessage },
     { status: 500 }
   );
-  }
+}
 
 }

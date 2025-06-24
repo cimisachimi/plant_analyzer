@@ -42,8 +42,12 @@ export default function HistoryPage() {
           }
           const data = await response.json();
           setOriginalHistory(data);
-        } catch (err: any) {
-          setError(err.message);
+        } catch (err) {
+          if (err instanceof Error){
+            setError(err.message);
+          }else{
+            setError('Terjadi Kesalahan yang Tak terduga')
+          }
         } finally {
           setIsLoading(false);
         }
