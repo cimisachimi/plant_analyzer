@@ -82,7 +82,10 @@ export async function POST(request: Request) {
 
   // Anonymous limit check
   if (!userId) {
-    const usage = parseInt(cookieStore.get('anonymous_submissions')?.value || '0');
+    const cookieStore = cookies(); // Make sure this is assigned
+    const anonymousSubmissions = (await cookieStore).get('anonymous_submissions');
+    const usage = parseInt(anonymousSubmissions?.value || '0');
+
     if (usage >= 3) {
       return NextResponse.json(
         { error: 'Batas penggunaan untuk pengguna anonim tercapai. Silakan login untuk lanjut.' },
