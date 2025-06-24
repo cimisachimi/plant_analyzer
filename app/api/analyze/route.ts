@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
   // LANGKAH 1: PEMERIKSAAN IZIN UNTUK PENGGUNA TAMU
   if (!userId) {
-    const usage = parseInt(cookieStore.get('anonymous_submissions')?.value || '0');
+    const usage = parseInt((await cookieStore).get('anonymous_submissions')?.value || '0');
     if (usage >= 3) {
       return NextResponse.json(
         { error: 'Batas penggunaan untuk pengguna anonim tercapai. Silakan login untuk lanjut.' },
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       } 
       // Jika pengguna adalah tamu, perbarui cookie mereka
       else {
-        const currentUsage = parseInt(cookieStore.get('anonymous_submissions')?.value || '0');
+        const currentUsage = parseInt((await cookieStore).get('anonymous_submissions')?.value || '0');
         response.cookies.set('anonymous_submissions', String(currentUsage + 1), {
           maxAge: 60 * 60 * 24 * 7, // Cookie berlaku selama 7 hari
         });
