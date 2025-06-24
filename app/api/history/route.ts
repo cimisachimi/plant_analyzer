@@ -29,11 +29,13 @@ export async function GET() {
 
     return NextResponse.json(history);
 
-  } catch (err: any) {
-    console.error('Error fetching history:', err);
-    return NextResponse.json(
-      { error: 'Gagal mengambil data riwayat.', details: err.message },
-      { status: 500 }
-    );
+  } catch (err: unknown) {
+  const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+  console.error('Error fetching history:', err);
+  return NextResponse.json(
+    { error: 'Gagal mengambil data riwayat.', details: errorMessage },
+    { status: 500 }
+  );
   }
+
 }
