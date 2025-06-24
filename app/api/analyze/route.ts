@@ -1,9 +1,16 @@
-// Filename: /api/analyze.ts
+export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
+import { createClient } from '@supabase/supabase-js';
 import { Client } from '@gradio/client';
+import { cookies } from 'next/headers';
 
-// Mendefinisikan struktur hasil analisis akhir
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
 interface AnalysisResult {
   name: string;
   care: string;
@@ -18,52 +25,83 @@ const getAnalysisDetails = (label: string, confidence: number): AnalysisResult =
     },
     'A tomato leaf with Late Blight': {
       name: 'Busuk Daun (Late Blight)',
-      care: 'Penyakit ini menyebar cepat. Segera cabut dan musnahkan tanaman yang terinfeksi. Pastikan jarak tanam cukup untuk sirkulasi udara. Fungisida (berbahan tembaga atau sistemik) diperlukan untuk pengendalian, terutama dalam kondisi basah dan sejuk.',
+      care: 'Penyakit ini menyebar cepat. Segera cabut dan musnahkan tanaman yang terinfeksi. Pastikan jarak tanam cukup untuk sirkulasi udara. Gunakan fungisida berbahan tembaga atau sistemik.',
     },
     'A tomato leaf with Leaf Mold': {
       name: 'Embun Tepung (Leaf Mold)',
-      care: 'Perbaiki sirkulasi udara dengan pemangkasan dan pengaturan jarak tanam. Kurangi kelembapan jika memungkinkan dan hindari membasahi daun. Varietas yang tahan adalah pertahanan terbaik. Gunakan fungisida jika parah.',
+      care: 'Perbaiki sirkulasi udara dan hindari kelembapan berlebih. Gunakan fungisida jika parah.',
     },
     'A tomato leaf with Septoria Leaf Spot': {
       name: 'Bercak Daun Septoria',
-      care: 'Buang dan musnahkan daun yang terinfeksi. Beri mulsa di sekitar pangkal tanaman untuk mencegah percikan tanah. Lakukan rotasi tanaman dan gunakan fungisida yang mengandung klorotalonil atau mankozeb.',
+      care: 'Buang daun terinfeksi, beri mulsa, dan gunakan fungisida seperti klorotalonil atau mankozeb.',
     },
     'A tomato leaf with Bacterial Spot': {
-        name: 'Bercak Bakteri',
-        care: 'Hindari penyiraman dari atas untuk mencegah penyebaran. Buang daun atau tanaman yang terinfeksi. Bakterisida berbahan dasar tembaga dapat memperlambat penyakit tetapi mungkin tidak bisa menghilangkannya. Jangan menyentuh tanaman saat basah.',
+      name: 'Bercak Bakteri',
+      care: 'Hindari penyiraman dari atas dan gunakan bakterisida berbasis tembaga.',
     },
     'A tomato leaf with Target Spot': {
-        name: 'Bercak Target',
-        care: 'Pangkas daun yang terinfeksi untuk meningkatkan sirkulasi udara. Siram di pangkal tanaman. Fungisida yang digunakan untuk Bercak Kering juga efektif untuk Bercak Target. Pastikan nutrisi tanaman tercukupi.',
+      name: 'Bercak Target',
+      care: 'Pangkas daun terinfeksi dan gunakan fungisida yang sesuai.',
     },
     'A tomato leaf with Tomato Yellow Leaf Curl Virus': {
       name: 'Virus Keriting Daun Kuning Tomat',
-      care: 'Ini adalah infeksi virus yang disebarkan oleh kutu kebul. Tidak ada obatnya. Segera cabut dan musnahkan tanaman yang terinfeksi untuk mencegah penyebaran. Kendalikan populasi kutu kebul dengan mulsa reflektif atau insektisida.',
+      care: 'Tidak ada obat. Cabut tanaman dan kendalikan kutu kebul.',
     },
     'A tomato leaf with Tomato Mosaic Virus': {
-        name: 'Virus Mosaik Tomat',
-        care: 'Tidak ada obat untuk virus ini. Cabut dan musnahkan tanaman yang terinfeksi untuk mencegah penyebarannya. Desinfeksi alat dan cuci tangan setelah menangani tanaman yang terinfeksi. Kendalikan populasi kutu daun karena mereka dapat menularkan virus.',
+      name: 'Virus Mosaik Tomat',
+      care: 'Musnahkan tanaman, desinfeksi alat, dan kendalikan kutu daun.',
     },
     'A tomato leaf with Spider Mites Two-spotted Spider Mite': {
-        name: 'Tungau Laba-laba (Two-spotted)',
-        care: 'Ini adalah hama, bukan penyakit. Semprot daun dengan air bertekanan kuat, terutama di bagian bawah, untuk menjatuhkannya. Gunakan sabun insektisida atau minyak nimba untuk serangan yang lebih berat. Undang predator alami seperti kepik.',
+      name: 'Tungau Laba-laba',
+      care: 'Gunakan semprotan air, sabun insektisida, atau minyak nimba.',
     },
     'A healthy tomato leaf': {
       name: 'Daun Sehat',
-      care: 'Daun tampak sehat. Lanjutkan praktik penyiraman yang baik, pastikan sinar matahari cukup, dan pantau terus tanda-tanda stres atau penyakit.',
+      care: 'Lanjutkan praktik perawatan tanaman yang baik.',
     },
   };
 
   const details = diseaseData[label] || {
     name: label,
-    care: 'Rekomendasi perawatan spesifik tidak ditemukan. Silakan berkonsultasi dengan ahli perkebunan setempat.',
+    care: 'Rekomendasi tidak ditemukan. Konsultasikan dengan ahli tanaman.',
   };
 
   return { ...details, score: confidence };
 };
 
-
 export async function POST(request: Request) {
+  const cookieStore = cookies();
+  let userId: string | null = null;
+
+  try {
+    const session = await auth();
+    userId = session?.user?.id ?? null;
+  } catch {
+    // continue anonymously
+  }
+
+  // Anonymous limit check
+  if (!userId) {
+    const usage = parseInt(cookieStore.get('anonymous_submissions')?.value || '0');
+    if (usage >= 3) {
+      return NextResponse.json(
+        { error: 'Batas penggunaan untuk pengguna anonim tercapai. Silakan login untuk lanjut.' },
+        { status: 403 }
+      );
+    }
+
+    // Increment cookie count
+    const response = NextResponse.next();
+    response.cookies.set('anonymous_submissions', String(usage + 1), {
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+    return await handlePrediction(request, null, response);
+  }
+
+  return await handlePrediction(request, userId);
+}
+
+async function handlePrediction(request: Request, userId: string | null, baseResponse?: NextResponse) {
   try {
     const { imageUrl } = await request.json();
     if (!imageUrl) {
@@ -72,36 +110,48 @@ export async function POST(request: Request) {
 
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
-      return NextResponse.json({ error: 'Failed to fetch image from URL.' }, { status: 500 });
+      return NextResponse.json({ error: 'Gagal mengunduh gambar dari URL.' }, { status: 500 });
     }
+
     const imageBlob = await imageResponse.blob();
 
     const client = await Client.connect('chimithecat/plant_analyzer');
-    const result = await client.predict('/predict', { image: imageBlob });
+    const prediction = await client.predict('/predict', { image: imageBlob });
 
-    if (Array.isArray(result.data) && result.data.length > 0) {
-      const rawPrediction = result.data[0];
-      const label = rawPrediction.label;
-      
-      const confidenceObject = rawPrediction.confidences?.find(
-          (c: { label: string; }) => c.label === label
-      );
-      
-      // --- PERUBAHAN DI SINI ---
-      // Gunakan nilai confidence asli dari model, atau 0 jika tidak ditemukan.
-      const score = confidenceObject?.confidence ?? 0; 
+    if (Array.isArray(prediction.data) && prediction.data.length > 0) {
+      const label = prediction.data[0].label;
+      const confidence = prediction.data[0].confidences?.find((c: { label: string }) => c.label === label)?.confidence ?? 0;
+      const finalResult = getAnalysisDetails(label, confidence);
 
-      const finalResult = getAnalysisDetails(label, score);
-      
-      return NextResponse.json(finalResult);
+      if (userId) {
+        const { error: insertError } = await supabase
+          .from('analysis_history')
+          .insert({
+            user_id: userId,
+            image_url: imageUrl,
+            disease_name: finalResult.name,
+            score: finalResult.score,
+            care_instructions: finalResult.care,
+          });
 
+        if (insertError) {
+          console.error('Supabase insert error:', insertError);
+        }
+      }
+
+      return baseResponse
+        ? NextResponse.json(finalResult, { headers: baseResponse.headers })
+        : NextResponse.json(finalResult);
     } else {
-      throw new Error('Invalid prediction response from API.');
+      throw new Error('Model tidak mengembalikan hasil.');
     }
   } catch (err) {
-    console.error('Error in /api/analyze route:', err);
+    console.error('Error in analyze route:', err);
     return NextResponse.json(
-      { error: 'Failed to get prediction.', details: err instanceof Error ? err.message : JSON.stringify(err) },
+      {
+        error: 'Gagal mendapatkan analisis.',
+        details: err instanceof Error ? err.message : JSON.stringify(err),
+      },
       { status: 500 }
     );
   }
