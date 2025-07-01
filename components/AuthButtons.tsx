@@ -1,33 +1,35 @@
-// Filename: components/AuthButtons.tsx
-import { signIn, signOut } from "@/auth"
-import { revalidatePath } from "next/cache"; // <-- 1. Impor di sini
+import { signIn, signOut } from "@/auth";
+import { revalidatePath } from "next/cache";
 
 export function SignIn() {
   return (
-    <form action={async () => { "use server"; await signIn("google") }}>
-      <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
+    <form action={async () => { "use server"; await signIn("google"); }}>
+      <button 
+        type="submit" 
+        className="px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-colors bg-white text-green-600 hover:bg-gray-100"
+      >
         Masuk dengan Google
       </button>
     </form>
-  )
+  );
 }
 
 export function SignOut() {
   return (
-        <form
+    <form
       action={async () => {
         "use server";
-        
-        // 2. Perintahkan untuk membersihkan cache halaman utama ('/')
         revalidatePath("/");
-        
-        // 3. Lanjutkan dengan logout dan redirect
         await signOut({ redirectTo: "/" });
       }}
     >
-      <button type="submit" className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
+      {/* --- Updated with a subtle red on hover --- */}
+      <button 
+        type="submit" 
+        className="px-3 py-2 rounded-md text-sm font-medium transition-all shadow-sm bg-white text-red-600 hover:bg-red-600 hover:text-white border border-red-200"
+      >
         Keluar
       </button>
     </form>
-  )
+  );
 }

@@ -39,3 +39,31 @@ export async function GET() {
 }
 
 }
+
+export async function DELETE(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Tidak terotentikasi' }, { status: 401 });
+  }
+
+  try {
+    const { id } = await request.json();
+    if (!id) {
+      return NextResponse.json({ error: 'ID riwayat diperlukan.' }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from('analysis_history')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', session.user.id); // pastikan hanya menghapus milik sendiri
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Error deleting history item:', message);
+    return NextResponse.json({ error: 'Gagal menghapus riwayat.', details: message }, { status: 500 });
+  }
+}

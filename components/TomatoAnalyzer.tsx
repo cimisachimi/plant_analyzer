@@ -10,6 +10,7 @@ import { useSession } from 'next-auth/react';
 import UploadForm from './UploadForm';
 import AnalysisResultCard from './AnalysisResultCard';
 import GuestLimitIndicator from './GuestLimitIndicator';
+import HowToUseSection from './HowToUseSection';
 
 // Definisikan tipe data hasil analisis
 interface AnalysisResult { name: string; care: string; score: number; }
@@ -116,6 +117,7 @@ export default function TomatoAnalyzer() {
         <p className="text-gray-600 mb-6 text-center">
           Unggah gambar daun tomat untuk mengidentifikasi potensi penyakit dan mendapatkan tips perawatan.
         </p>
+        
 
         {status === 'unauthenticated' && (
           <GuestLimitIndicator remainingUses={remainingUses} limit={GUEST_LIMIT} />
@@ -127,6 +129,13 @@ export default function TomatoAnalyzer() {
         {isLoading && <LoadingIndicator />}
         {result && blob && <AnalysisResultCard imageUrl={blob.url} result={result} />}
       </div>
+      
+      <HowToUseSection/>
+      <footer className="w-full text-center p-8 mt-16 border-t">
+        <p className="text-sm text-black">
+          © {new Date().getFullYear()} Plant Analyzer. Dibuat sebagai Proyek Akhir.
+        </p>
+      </footer>
     </main>
   );
 }

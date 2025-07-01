@@ -1,6 +1,4 @@
-// Filename: components/Header.tsx
-
-import { headers } from 'next/headers'; // <-- 1. Impor fungsi 'headers'
+import { headers } from 'next/headers';
 import { auth } from "@/auth";
 import { SignIn, SignOut } from "./AuthButtons";
 import Link from 'next/link';
@@ -8,11 +6,9 @@ import Link from 'next/link';
 export default async function Header() {
   const session = await auth();
   
-  // 2. Dapatkan path URL saat ini dari headers
   const headersList = headers();
   const pathname = (await headersList).get('x-next-pathname') || '';
 
-  // 3. Cek apakah kita sedang berada di halaman riwayat
   const isHistoryActive = pathname === '/dashboard/history';
   
   return (
@@ -20,22 +16,23 @@ export default async function Header() {
       <div className="container mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
           <span className="text-2xl">🍅</span>
-          <span className="text-foreground">Plant Analyzer</span>
+          {/* Changed text color for better contrast on green */}
+          <span className="text-white">Plant Analyzer</span>
         </Link>
         <nav className="flex items-center gap-4">
           {session?.user ? (
             <div className="flex items-center gap-4">
-              <p className="text-sm text-muted-foreground hidden sm:block">
+              <p className="text-sm text-green-100 hidden sm:block">
                 {session.user.email}
               </p>
               
-              {/* 4. Terapkan class secara kondisional */}
+              {/* --- Button Style Applied Here --- */}
               <Link 
                 href="/dashboard/history" 
-                className={`text-sm font-medium transition-colors ${
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all shadow-sm ${
                   isHistoryActive 
-                    ? 'text-primary' // Style jika aktif
-                    : 'text-muted-foreground hover:text-primary' // Style jika tidak aktif
+                    ? 'bg-gray-200 text-green-700' // Active button style
+                    : 'bg-white text-green-600 hover:bg-gray-100' // Default button style
                 }`}
               >
                 Riwayat
